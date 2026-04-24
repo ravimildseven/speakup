@@ -1,0 +1,11 @@
+.DS_Store
+LearnLanguage.zip
+.env
+.env.*
+*.log
+.vscode/
+.idea/
+NativeSpeakUp.html
+NativeSpeakUp_Idea.md
+pages/
+style.css
