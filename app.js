@@ -34,17 +34,12 @@ const DEFAULTS = {
   cloudModel: 'gpt-4o-mini',
 };
 
-// URLs verified: return HTTP 401 (gated) not 404 — correct paths, need HF token + license acceptance
+// URLs verified accessible (HTTP 401 without token, not 404) — need HF token + Gemma license
 const GEMMA_WEB_MODELS = [
   {
     id: 'gemma3-1b',
     name: 'Gemma 3 · 1B',
     url: 'https://huggingface.co/litert-community/Gemma3-1B-IT/resolve/main/gemma3-1b-it-int4-web.task',
-  },
-  {
-    id: 'gemma-3n-e2b',
-    name: 'Gemma 3n · E2B',
-    url: 'https://huggingface.co/google/gemma-3n-E2B-it-litert-lm/resolve/main/gemma-3n-E2B-it-int4-Web.litertlm',
   },
 ];
 
@@ -274,7 +269,6 @@ let aiMode = normalizeAIMode(localStorage.getItem(STORAGE_KEYS.aiMode));
 let speakingGoal = normalizeSpeakingGoal(localStorage.getItem(STORAGE_KEYS.speakingGoal));
 let webllmEngine = null;
 let webllmLoading = false;
-let webllmModelsPopulated = false;
 let avatarOn = getStored(STORAGE_KEYS.avatarOn, 'false') === 'true';
 let activeTab = 'speak';
 let currentSpeakResponse = null;
@@ -960,7 +954,6 @@ function renderWebModels() {
   webllmModelPicker.querySelectorAll('.model-option').forEach(btn => {
     btn.classList.toggle('selected', btn.dataset.webmodel === savedId);
   });
-  webllmModelsPopulated = true;
 }
 
 async function testModelUrl() {
@@ -975,14 +968,15 @@ async function testModelUrl() {
   webllmTestResult.textContent = 'Testing…';
 
   try {
+    // Range request: downloads 1 byte, returns Content-Range: bytes 0-0/ACTUAL_TOTAL
     const res = await fetch(modelConfig.url, {
-      method: 'HEAD',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, Range: 'bytes=0-0' },
     });
 
-    if (res.ok) {
-      const bytes = parseInt(res.headers.get('content-length') || '0', 10);
-      const mb = bytes ? ` · ${(bytes / 1048576).toFixed(0)} MB` : '';
+    if (res.ok || res.status === 206) {
+      const range = res.headers.get('Content-Range'); // "bytes 0-0/TOTAL"
+      const total = range ? parseInt(range.split('/')[1], 10) : 0;
+      const mb = total ? ` · ${(total / 1048576).toFixed(0)} MB actual` : '';
       webllmTestResult.textContent = `✓ Accessible${mb} — ready to load`;
       localStorage.setItem(STORAGE_KEYS.hfToken, token);
       syncSettingsForm();
@@ -1098,19 +1092,21 @@ async function loadWebLLMModel() {
 
     webllmProgressFill.style.width = '88%';
     webllmProgressText.textContent = 'Initializing model…';
+    webllmTestResult.textContent = '';
 
     if (webllmEngine) { try { webllmEngine.close(); } catch { /* ignore */ } }
 
-    webllmEngine = await LlmInference.createFromOptions(genAi, {
-      baseOptions: { modelAssetBuffer: new Uint8Array(modelBuffer) },
-      maxTokens: 600,
-      topK: 40,
-      temperature: 0.2,
-      randomSeed: 42,
-    });
+    // Use Blob URL so MediaPipe loads via its normal path (lower memory pressure than buffer)
+    const blob = new Blob([new Uint8Array(modelBuffer)]);
+    const blobUrl = URL.createObjectURL(blob);
+    try {
+      webllmEngine = await LlmInference.createFromModelPath(genAi, blobUrl);
+    } finally {
+      URL.revokeObjectURL(blobUrl);
+    }
 
     webllmProgressFill.style.width = '100%';
-    await new Promise(r => setTimeout(r, 300));
+    await new Promise(r => setTimeout(r, 200));
 
     webllmProgressWrap.style.display = 'none';
     webllmReadyRow.style.display = 'block';
@@ -1120,7 +1116,8 @@ async function loadWebLLMModel() {
   } catch (error) {
     webllmProgressWrap.style.display = 'none';
     webllmLoadBtn.textContent = 'Load Model';
-    showToast(error.message.slice(0, 100));
+    // Show full error persistently so it can be read and reported
+    webllmTestResult.textContent = `✗ ${error.message || String(error)}`;
   } finally {
     webllmLoading = false;
     webllmLoadBtn.disabled = false;
@@ -1348,7 +1345,7 @@ function syncModeUI() {
 
   gemmaSettings.hidden = aiMode !== 'gemma';
   gemmaWebSettings.hidden = aiMode !== 'gemma-web';
-  if (aiMode === 'gemma-web') renderWebModels();
+  if (aiMode === 'gemma-web') renderWebModels(); // syncs selection state each open
   cloudSettings.hidden = aiMode !== 'cloud';
   avatarSettings.hidden = !aiMode;
 
