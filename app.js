@@ -28,10 +28,25 @@ const STORAGE_KEYS = {
 const DEFAULTS = {
   model: 'gemma3:4b',
   ollamaUrl: 'http://localhost:11434',
-  webllmModel: 'Gemma-3-1B-Instruct-q4f32_1-MLC',
+  webllmModel: 'gemma-3n-e1b',
   cloudUrl: 'https://api.openai.com/v1',
   cloudModel: 'gpt-4o-mini',
 };
+
+const GEMMA_WEB_MODELS = [
+  {
+    id: 'gemma-3n-e1b',
+    name: 'Gemma 3n · E1B',
+    url: 'https://storage.googleapis.com/mediapipe-models/llm_inference/gemma-3n-E1B-it-cpu-int4/float16/1/gemma-3n-E1B-it-cpu-int4.task',
+  },
+  {
+    id: 'gemma-3n-e2b',
+    name: 'Gemma 3n · E2B',
+    url: 'https://storage.googleapis.com/mediapipe-models/llm_inference/gemma-3n-E2B-it-cpu-int4/float16/1/gemma-3n-E2B-it-cpu-int4.task',
+  },
+];
+
+const MODEL_CACHE = 'nativespeakup-models-v1';
 
 const SPEAKING_GOALS = {
   learn: {
@@ -928,83 +943,71 @@ async function processWithWebLLM(prompt) {
     throw new Error('Open the menu and tap "Load Model" to download Gemma to your device first.');
   }
 
-  const response = await webllmEngine.chat.completions.create({
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0.2,
-    max_tokens: 600,
-    response_format: { type: 'json_object' },
-  });
-
-  const content = response.choices?.[0]?.message?.content;
-  if (!content) throw new Error('On-device model returned an empty response');
-  return parseJSON(content);
+  const text = await webllmEngine.generateResponse(prompt);
+  if (!text) throw new Error('On-device model returned an empty response');
+  return parseJSON(text);
 }
 
-async function populateWebLLMModels() {
-  const loadingEl = document.getElementById('webllm-model-loading');
-  if (loadingEl) loadingEl.textContent = 'Fetching available Gemma models…';
+function renderWebModels() {
+  const savedId = getWebLLMModel();
+  webllmModelPicker.querySelectorAll('.model-option').forEach(btn => {
+    btn.classList.toggle('selected', btn.dataset.webmodel === savedId);
+  });
+  webllmModelsPopulated = true;
+}
 
+async function fetchWithProgress(url, onProgress) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Model download failed (HTTP ${response.status}). Check the model URL.`);
+
+  const total = parseInt(response.headers.get('Content-Length') || '0', 10);
+  const reader = response.body.getReader();
+  const chunks = [];
+  let received = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    received += value.length;
+    if (total > 0) {
+      onProgress(received / total, `${(received / 1048576).toFixed(0)} MB / ${(total / 1048576).toFixed(0)} MB`);
+    } else {
+      onProgress(0, `${(received / 1048576).toFixed(0)} MB downloaded…`);
+    }
+  }
+
+  const merged = new Uint8Array(received);
+  let pos = 0;
+  for (const chunk of chunks) { merged.set(chunk, pos); pos += chunk.length; }
+  return merged.buffer;
+}
+
+async function getCachedModel(url) {
   try {
-    const { prebuiltAppConfig } = await import('https://esm.run/@mlc-ai/web-llm');
-    const gemmaModels = prebuiltAppConfig.model_list.filter(m =>
-      m.model_id.toLowerCase().includes('gemma')
-    );
+    const cache = await caches.open(MODEL_CACHE);
+    const cached = await cache.match(url);
+    return cached ? cached.arrayBuffer() : null;
+  } catch {
+    return null;
+  }
+}
 
-    webllmModelPicker.replaceChildren();
-
-    if (!gemmaModels.length) {
-      webllmModelPicker.innerHTML = '<div class="field-note">No Gemma models found in this WebLLM version.</div>';
-      return;
-    }
-
-    const savedModel = getWebLLMModel();
-    let firstId = null;
-
-    gemmaModels.forEach(m => {
-      const btn = document.createElement('button');
-      btn.className = 'model-option';
-      btn.dataset.webmodel = m.model_id;
-      btn.type = 'button';
-
-      const vram = m.vram_required_MB
-        ? `~${(m.vram_required_MB / 1024).toFixed(1)} GB`
-        : '';
-
-      btn.innerHTML = `<span class="model-option-name">${m.model_id}</span><span class="model-option-ram">${vram}</span><span class="model-option-check">✦</span>`;
-      webllmModelPicker.appendChild(btn);
-
-      if (!firstId) firstId = m.model_id;
-    });
-
-    const toSelect = gemmaModels.find(m => m.model_id === savedModel)?.model_id || firstId;
-    if (toSelect) {
-      webllmModelPicker.querySelector(`[data-webmodel="${toSelect}"]`)?.classList.add('selected');
-      localStorage.setItem(STORAGE_KEYS.webllmModel, toSelect);
-    }
-
-    webllmModelsPopulated = true;
-  } catch (error) {
-    webllmModelPicker.innerHTML = `<div class="field-note">Could not fetch model list: ${error.message.slice(0, 80)}</div>`;
+async function setCachedModel(url, buffer) {
+  try {
+    const cache = await caches.open(MODEL_CACHE);
+    await cache.put(url, new Response(buffer, { headers: { 'Content-Type': 'application/octet-stream' } }));
+  } catch {
+    // cache write failure is non-fatal
   }
 }
 
 async function loadWebLLMModel() {
   if (webllmLoading) return;
 
-  if (!navigator.gpu) {
-    showToast('WebGPU not found. Use Chrome 113+ or Safari 17+ (iOS 17+).');
-    return;
-  }
-
-  if (!webllmModelsPopulated) {
-    await populateWebLLMModels();
-  }
-
   const modelId = getWebLLMModel();
-  if (!modelId) {
-    showToast('Select a model first');
-    return;
-  }
+  const modelConfig = GEMMA_WEB_MODELS.find(m => m.id === modelId);
+  if (!modelConfig) { showToast('Select a model first'); return; }
 
   webllmLoading = true;
   webllmLoadBtn.disabled = true;
@@ -1012,29 +1015,59 @@ async function loadWebLLMModel() {
   webllmProgressWrap.style.display = 'flex';
   webllmReadyRow.style.display = 'none';
   webllmProgressFill.style.width = '0%';
-  webllmProgressText.textContent = 'Starting…';
+  webllmProgressText.textContent = 'Checking cache…';
 
   try {
-    const { CreateMLCEngine } = await import('https://esm.run/@mlc-ai/web-llm');
+    let modelBuffer = await getCachedModel(modelConfig.url);
 
-    const engine = await CreateMLCEngine(modelId, {
-      initProgressCallback: report => {
-        const pct = Math.round((report.progress || 0) * 100);
-        webllmProgressFill.style.width = `${pct}%`;
-        webllmProgressText.textContent = report.text || `${pct}%`;
-      },
+    if (modelBuffer) {
+      webllmProgressFill.style.width = '55%';
+      webllmProgressText.textContent = 'Loaded from cache…';
+    } else {
+      webllmProgressText.textContent = 'Downloading model…';
+      modelBuffer = await fetchWithProgress(modelConfig.url, (pct, label) => {
+        webllmProgressFill.style.width = `${Math.round(pct * 50)}%`;
+        webllmProgressText.textContent = label;
+      });
+      await setCachedModel(modelConfig.url, modelBuffer);
+    }
+
+    webllmProgressFill.style.width = '70%';
+    webllmProgressText.textContent = 'Loading WASM runtime…';
+
+    const { FilesetResolver, LlmInference } = await import(
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-genai'
+    );
+
+    const genAi = await FilesetResolver.forGenAiTasks(
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-genai/wasm'
+    );
+
+    webllmProgressFill.style.width = '88%';
+    webllmProgressText.textContent = 'Initializing model…';
+
+    if (webllmEngine) { try { webllmEngine.close(); } catch { /* ignore */ } }
+
+    webllmEngine = await LlmInference.createFromOptions(genAi, {
+      baseOptions: { modelAssetBuffer: new Uint8Array(modelBuffer) },
+      maxTokens: 600,
+      topK: 40,
+      temperature: 0.2,
+      randomSeed: 42,
     });
 
-    webllmEngine = engine;
+    webllmProgressFill.style.width = '100%';
+    await new Promise(r => setTimeout(r, 300));
+
     webllmProgressWrap.style.display = 'none';
     webllmReadyRow.style.display = 'block';
     webllmLoadBtn.textContent = 'Reload Model';
     syncSpeakAvailability();
-    showToast('Gemma loaded — ready to coach');
+    showToast(`${modelConfig.name} loaded — ready to coach`);
   } catch (error) {
     webllmProgressWrap.style.display = 'none';
     webllmLoadBtn.textContent = 'Load Model';
-    showToast(`Load failed: ${error.message.slice(0, 80)}`);
+    showToast(error.message.slice(0, 100));
   } finally {
     webllmLoading = false;
     webllmLoadBtn.disabled = false;
@@ -1262,7 +1295,7 @@ function syncModeUI() {
 
   gemmaSettings.hidden = aiMode !== 'gemma';
   gemmaWebSettings.hidden = aiMode !== 'gemma-web';
-  if (aiMode === 'gemma-web' && !webllmModelsPopulated) populateWebLLMModels();
+  if (aiMode === 'gemma-web') renderWebModels();
   cloudSettings.hidden = aiMode !== 'cloud';
   avatarSettings.hidden = !aiMode;
 

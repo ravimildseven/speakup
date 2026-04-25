@@ -1029,7 +1029,16 @@ body.gemma .btn:hover { background: var(--violet-dim); color: var(--violet); bor
 
       <div class="field-label">Choose Model</div>
       <div style="display:flex; flex-direction:column; gap:6px;" id="webllm-model-picker">
-        <div class="field-note" id="webllm-model-loading">Tap "Load Model" to fetch available Gemma models…</div>
+        <button class="model-option selected" data-webmodel="gemma-3n-e1b" type="button">
+          <span class="model-option-name">Gemma 3n · E1B</span>
+          <span class="model-option-ram">~400 MB · fastest · phones ✓</span>
+          <span class="model-option-check">✦</span>
+        </button>
+        <button class="model-option" data-webmodel="gemma-3n-e2b" type="button">
+          <span class="model-option-name">Gemma 3n · E2B</span>
+          <span class="model-option-ram">~600 MB · better quality</span>
+          <span class="model-option-check">✦</span>
+        </button>
       </div>
 
       <button id="webllm-load-btn" class="btn" style="align-self:stretch; text-align:center;">Load Model</button>
@@ -1045,7 +1054,7 @@ body.gemma .btn:hover { background: var(--violet-dim); color: var(--violet); bor
         <div class="webllm-ready">✦ Model loaded — ready to coach</div>
       </div>
 
-      <div class="field-note">Needs WebGPU: Safari 17+ (iOS 17+) or Chrome 113+. Model is cached after the first download — reload is instant.</div>
+      <div class="field-note">Works on any modern browser — no WebGPU needed. Download happens once over Wi-Fi and is cached locally. Subsequent loads are instant.</div>
     </div>
 
     <div class="sheet-section" id="cloud-settings" hidden>
