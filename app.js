@@ -987,7 +987,7 @@ async function testModelUrl() {
       localStorage.setItem(STORAGE_KEYS.hfToken, token);
       syncSettingsForm();
     } else if (res.status === 401 || res.status === 403) {
-      webllmTestResult.textContent = '✗ Token rejected or license not accepted on this model's HF page';
+      webllmTestResult.textContent = '✗ Token rejected — or Gemma license not accepted on HF for this model';
     } else {
       webllmTestResult.textContent = `✗ HTTP ${res.status}`;
     }
