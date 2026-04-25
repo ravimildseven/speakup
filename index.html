@@ -71,11 +71,13 @@ header {
 body.gemma .wordmark .s { color: var(--violet); }
 .settings-btn {
   background: var(--surface2); border: 1px solid var(--border2); border-radius: 50%;
-  width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
-  color: var(--muted); font-size: 16px; cursor: pointer; font-family: inherit;
-  transition: color 0.2s, background 0.2s;
+  width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+  color: var(--muted); font-size: 18px; cursor: pointer; font-family: inherit;
+  transition: color 0.2s, background 0.2s; touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 .settings-btn:hover { color: var(--text); background: var(--surface3); }
+.settings-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
 /* ── AI Selector ── */
 .ai-selector {
@@ -116,12 +118,14 @@ body.gemma .wordmark .s { color: var(--violet); }
   display: flex; gap: 4px; padding: 12px 20px 0;
 }
 .tab-btn {
-  flex: 1; padding: 9px 4px; border-radius: var(--radius-sm);
+  flex: 1; padding: 10px 4px; min-height: 56px; border-radius: var(--radius-sm);
   border: 1px solid transparent; background: transparent;
-  color: var(--muted); font-family: inherit; font-size: 11px; font-weight: 700;
+  color: var(--muted); font-family: inherit; font-size: 12px; font-weight: 700;
   cursor: pointer; transition: all 0.22s; text-align: center; letter-spacing: 0.02em;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
 }
-.tab-btn .ti { display: block; font-size: 17px; margin-bottom: 3px; }
+.tab-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.tab-btn .ti { display: block; font-size: 20px; margin-bottom: 4px; }
 .tab-btn.active {
   background: var(--gold-dim); border-color: rgba(240,165,0,0.3); color: var(--gold);
 }
@@ -138,7 +142,7 @@ body.gemma .tab-btn.active {
 
 /* ── Section headers ── */
 .section-label {
-  font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+  font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
   color: var(--muted); padding: 2px 0;
 }
 .section-bar {
@@ -180,15 +184,18 @@ body.gemma .tab-btn.active {
   background: var(--surface2);
   color: var(--text);
   border-radius: 999px;
-  padding: 8px 12px;
+  padding: 12px 16px;
+  min-height: 44px;
   font-family: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
   appearance: none;
   opacity: 1;
   pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 .goal-btn:hover {
   border-color: rgba(255,255,255,0.2);
@@ -328,11 +335,11 @@ body.gemma .transcript-box {
 }
 @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
 .card-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.card-tag { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.card-tag { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
 .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); transition: background 0.45s; }
 body.gemma .dot { background: var(--violet); }
 .dot.coral { background: var(--coral); }
-.copy-btn { background: none; border: none; color: var(--muted2); cursor: pointer; padding: 4px 6px; border-radius: 6px; font-size: 13px; transition: color 0.2s; }
+.copy-btn { background: none; border: none; color: var(--muted2); cursor: pointer; padding: 10px 12px; min-height: 44px; min-width: 44px; border-radius: 6px; font-size: 14px; transition: color 0.2s; display: flex; align-items: center; justify-content: center; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .copy-btn:hover { color: var(--text); background: var(--surface2); }
 .card.star { border-color: rgba(240,165,0,0.2); background: linear-gradient(135deg, var(--surface) 0%, rgba(240,165,0,0.04) 100%); }
 body.gemma .card.star { border-color: rgba(176,126,248,0.2); background: linear-gradient(135deg, var(--surface) 0%, rgba(176,126,248,0.04) 100%); }
@@ -346,11 +353,12 @@ body.gemma .native-badge { background: var(--violet-dim); border-color: rgba(176
 .conf-fill { height: 100%; border-radius: 100px; background: var(--gold); transition: width 1.1s cubic-bezier(0.34,1.2,0.64,1), background 0.45s; }
 body.gemma .conf-fill { background: var(--violet); }
 .card-actions { display: flex; gap: 8px; margin-top: 12px; }
-.play-btn { background: none; border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 7px 14px; color: var(--gold); font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+.play-btn { background: none; border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 12px 16px; min-height: 44px; color: var(--gold); font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.2s; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .play-btn:hover { background: var(--gold-dim); }
+.play-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 body.gemma .play-btn { color: var(--violet); }
 body.gemma .play-btn:hover { background: var(--violet-dim); }
-.save-word-btn { background: var(--gold-dim); border: 1px solid rgba(240,165,0,0.32); border-radius: var(--radius-sm); padding: 7px 14px; color: var(--gold); font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all 0.2s; flex: 1; }
+.save-word-btn { background: var(--gold-dim); border: 1px solid rgba(240,165,0,0.32); border-radius: var(--radius-sm); padding: 12px 16px; min-height: 44px; color: var(--gold); font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all 0.2s; flex: 1; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .save-word-btn:hover { background: var(--gold); color: #0c0a08; }
 .save-word-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 body.gemma .save-word-btn { background: var(--violet-dim); border-color: rgba(176,126,248,0.32); color: var(--violet); }
@@ -371,7 +379,7 @@ body.gemma .vocab-word { color: var(--violet); }
 /* ── Browse section ── */
 .chips-row { display: flex; gap: 7px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
 .chips-row::-webkit-scrollbar { display: none; }
-.chip { flex-shrink: 0; padding: 5px 13px; background: var(--surface); border: 1px solid var(--border); border-radius: 100px; font-size: 12px; color: var(--muted); cursor: pointer; transition: all 0.18s; white-space: nowrap; font-weight: 500; }
+.chip { flex-shrink: 0; padding: 11px 16px; min-height: 44px; background: var(--surface); border: 1px solid var(--border); border-radius: 100px; font-size: 13px; color: var(--muted); cursor: pointer; transition: all 0.18s; white-space: nowrap; font-weight: 500; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .chip:hover, .chip.on { color: var(--gold); border-color: rgba(240,165,0,0.45); background: var(--gold-dim); }
 body.gemma .chip.on { color: var(--violet); border-color: rgba(176,126,248,0.45); background: var(--violet-dim); }
 .browse-card { background: var(--surface2); border: 1px solid var(--border); border-left: 3px solid var(--gold); border-radius: var(--radius-sm); padding: 15px; transition: border-color 0.45s; }
@@ -391,7 +399,7 @@ body.gemma .reveal-btn { background: var(--violet); }
 body.gemma .vi-word { color: var(--violet); }
 .vi-meaning { font-size: 12px; color: var(--muted); line-height: 1.4; }
 .vi-context { font-size: 11px; color: var(--muted2); margin-top: 4px; font-style: italic; }
-.del-btn { background: none; border: none; color: var(--muted2); font-size: 14px; cursor: pointer; padding: 2px 6px; border-radius: 5px; flex-shrink: 0; transition: color 0.2s; }
+.del-btn { background: none; border: none; color: var(--muted2); font-size: 16px; cursor: pointer; padding: 10px 12px; min-height: 44px; min-width: 44px; border-radius: 5px; flex-shrink: 0; transition: color 0.2s; display: flex; align-items: center; justify-content: center; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .del-btn:hover { color: var(--coral); }
 .vocab-empty { text-align: center; padding: 36px 20px; color: var(--muted); font-size: 13px; line-height: 1.6; }
 .vocab-empty .ei { font-size: 32px; opacity: 0.3; display: block; margin-bottom: 10px; }
@@ -450,7 +458,7 @@ body.gemma .cal-day.today { outline-color: var(--violet); }
 /* ── Mic dock ── */
 .mic-dock {
   position: fixed; bottom: 0; max-width: 420px; width: 100%;
-  padding: 8px 20px 22px;
+  padding: 8px 20px calc(22px + env(safe-area-inset-bottom));
   background: linear-gradient(to top, var(--bg) 60%, transparent);
   display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 15;
 }
@@ -479,8 +487,8 @@ body.gemma .mic-btn.listening { background: var(--violet); box-shadow: 0 0 0 10p
 .mic-btn.listening .mic-icon { filter: brightness(0); }
 .lang-select {
   background: var(--surface2); border: 1px solid var(--border); border-radius: 100px;
-  padding: 5px 12px; color: var(--text); font-family: inherit; font-size: 12px; font-weight: 500;
-  cursor: pointer;
+  padding: 10px 16px; min-height: 44px; color: var(--text); font-family: inherit; font-size: 13px; font-weight: 500;
+  cursor: pointer; touch-action: manipulation;
 }
 .mic-hint { font-size: 11px; color: var(--muted2); }
 .timer { font-size: 12px; font-weight: 700; font-family: 'DM Mono',monospace; font-variant-numeric: tabular-nums; color: var(--gold); transition: color 0.45s; }
@@ -491,8 +499,9 @@ body.gemma .timer { color: var(--violet); }
 .sheet { background: var(--surface); border-radius: 22px 22px 0 0; width: 100%; max-width: 420px; padding: 20px 20px 52px; display: flex; flex-direction: column; gap: 10px; max-height: 88vh; overflow-y: auto; border-top: 1px solid var(--border2); }
 .sheet-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
 .sheet-title { font-size: 16px; font-weight: 700; }
-.sheet-close { background: var(--surface2); border: 1px solid var(--border); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; cursor: pointer; font-family: inherit; }
-.sheet-close:hover { color: var(--text); }
+.sheet-close { background: var(--surface2); border: 1px solid var(--border); border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 16px; cursor: pointer; font-family: inherit; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.sheet-close:hover { color: var(--text); background: var(--surface3); }
+.sheet-close:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .field-label { font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
 .field-input { background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 10px 14px; color: var(--text); font-family: inherit; font-size: 14px; width: 100%; transition: border-color 0.2s; }
 .field-input:focus { outline: none; border-color: var(--gold); }
@@ -565,8 +574,9 @@ body.gemma .mode-choice.active {
   letter-spacing: 0.08em;
   color: var(--muted);
 }
-.btn { background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 8px 16px; color: var(--text); font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; align-self: flex-start; }
+.btn { background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 12px 16px; min-height: 44px; color: var(--text); font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; align-self: flex-start; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .btn:hover { background: var(--gold-dim); color: var(--gold); border-color: rgba(240,165,0,0.35); }
+.btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 body.gemma .btn:hover { background: var(--violet-dim); color: var(--violet); border-color: rgba(176,126,248,0.35); }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .divider { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
@@ -577,6 +587,69 @@ body.gemma .btn:hover { background: var(--violet-dim); color: var(--violet); bor
 /* ── Toast ── */
 .toast { position: fixed; bottom: 130px; left: 50%; transform: translateX(-50%); background: var(--gold); color: #0c0a08; font-weight: 700; font-size: 13px; padding: 10px 20px; border-radius: 100px; opacity: 0; transition: opacity 0.25s; pointer-events: none; z-index: 200; white-space: nowrap; }
 .toast.show { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mic-btn.listening { animation: none; box-shadow: 0 0 0 6px var(--gold-dim), 0 6px 24px var(--gold-glow); }
+  body.gemma .mic-btn.listening { box-shadow: 0 0 0 6px var(--violet-dim), 0 6px 24px var(--violet-glow); }
+  .mic-btn.processing .mic-icon { animation: none; opacity: 0.6; }
+  .card { animation: none; }
+  * { transition-duration: 0.01ms !important; }
+}
+
+/* ── Gemma Install Guide ── */
+.install-steps { display: flex; flex-direction: column; gap: 8px; }
+.install-step { display: flex; gap: 10px; align-items: flex-start; }
+.step-badge {
+  width: 20px; height: 20px; flex-shrink: 0; border-radius: 6px;
+  background: var(--violet-dim); border: 1px solid rgba(176,126,248,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 800; color: var(--violet); margin-top: 1px;
+}
+.step-copy { font-size: 12px; color: var(--muted); line-height: 1.55; }
+.step-copy b { color: var(--text); }
+.step-copy code { font-family: 'DM Mono',monospace; font-size: 11px; color: var(--violet); background: var(--surface3); padding: 1px 5px; border-radius: 4px; }
+
+/* ── Model Picker ── */
+.model-family-label {
+  font-size: 10px; font-weight: 800; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted); margin-top: 4px;
+}
+.model-option {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border2); background: var(--surface2);
+  cursor: pointer; font-family: inherit; text-align: left;
+  transition: all 0.2s; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  width: 100%;
+}
+.model-option:hover { border-color: rgba(176,126,248,0.4); background: var(--violet-dim); }
+.model-option.selected { border-color: rgba(176,126,248,0.55); background: var(--violet-dim); }
+.model-option-name { font-size: 13px; font-weight: 700; color: var(--text); flex: 1; font-family: 'DM Mono',monospace; }
+.model-option-ram { font-size: 10px; color: var(--muted); white-space: nowrap; }
+.model-option-check { font-size: 13px; color: var(--violet); opacity: 0; transition: opacity 0.18s; }
+.model-option.selected .model-option-check { opacity: 1; }
+
+/* ── Pull Command Block ── */
+.pull-command-block {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface3); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 10px 12px;
+}
+.pull-cmd-text {
+  flex: 1; font-family: 'DM Mono',monospace; font-size: 12px;
+  color: var(--text); word-break: break-all;
+}
+.pull-copy-btn {
+  background: none; border: none; color: var(--muted); cursor: pointer;
+  padding: 4px 8px; font-size: 14px; transition: color 0.2s; flex-shrink: 0;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.pull-copy-btn:hover { color: var(--violet); }
+
+/* ── WebLLM download progress ── */
+.webllm-progress-wrap { display: flex; flex-direction: column; gap: 5px; }
+.webllm-progress-label { font-size: 11px; color: var(--muted); font-family: 'DM Mono',monospace; }
+.webllm-ready { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: var(--radius-sm); background: var(--violet-dim); border: 1px solid rgba(176,126,248,0.35); font-size: 12px; font-weight: 700; color: var(--violet); }
 
 /* ── Desktop ── */
 @media (min-width: 421px) {
@@ -844,6 +917,13 @@ body.gemma .btn:hover { background: var(--violet-dim); color: var(--violet); bor
           </div>
           <div class="mode-choice-copy">Runs on your Mac through Ollama. Best when you want privacy and no API key.</div>
         </button>
+        <button id="mode-gemma-web" class="mode-choice" type="button">
+          <div class="mode-choice-top">
+            <span class="mode-choice-title">Gemma On-Device</span>
+            <span class="mode-choice-tag">PHONE</span>
+          </div>
+          <div class="mode-choice-copy">Downloads Gemma to your browser. Runs on iPhone or Android — no server, no API key, works offline.</div>
+        </button>
         <button id="mode-cloud" class="mode-choice" type="button">
           <div class="mode-choice-top">
             <span class="mode-choice-title">Cloud AI</span>
@@ -856,11 +936,116 @@ body.gemma .btn:hover { background: var(--violet-dim); color: var(--violet); bor
     </div>
 
     <div class="sheet-section" id="gemma-settings" hidden>
-      <div class="sheet-section-title">Gemma Local</div>
-      <div class="field-label">Ollama Model</div>
+      <div class="sheet-section-title">Gemma Local — Setup Guide</div>
+
+      <div class="install-steps">
+        <div class="install-step">
+          <div class="step-badge">1</div>
+          <div class="step-copy"><b>Install Ollama</b> — download from <code>ollama.com</code> and run it on your Mac</div>
+        </div>
+        <div class="install-step">
+          <div class="step-badge">2</div>
+          <div class="step-copy"><b>Pick a model below</b> — copy the command and run it in Terminal to download it</div>
+        </div>
+        <div class="install-step">
+          <div class="step-badge">3</div>
+          <div class="step-copy"><b>On phone?</b> Start Ollama with <code>OLLAMA_ORIGINS=* ollama serve</code>, then use a free HTTPS tunnel: <code>ngrok http 11434</code> — paste that URL below</div>
+        </div>
+      </div>
+
+      <div class="field-label">Gemma 3 — Stable</div>
+      <div style="display:flex; flex-direction:column; gap:6px;" id="model-picker">
+        <button class="model-option" data-model="gemma3:1b" type="button">
+          <span class="model-option-name">gemma3:1b</span>
+          <span class="model-option-ram">~1 GB · fastest</span>
+          <span class="model-option-check">✦</span>
+        </button>
+        <button class="model-option" data-model="gemma3:4b" type="button">
+          <span class="model-option-name">gemma3:4b</span>
+          <span class="model-option-ram">~3 GB · recommended</span>
+          <span class="model-option-check">✦</span>
+        </button>
+        <button class="model-option" data-model="gemma3:12b" type="button">
+          <span class="model-option-name">gemma3:12b</span>
+          <span class="model-option-ram">~8 GB · high quality</span>
+          <span class="model-option-check">✦</span>
+        </button>
+        <button class="model-option" data-model="gemma3:27b" type="button">
+          <span class="model-option-name">gemma3:27b</span>
+          <span class="model-option-ram">~17 GB · best quality</span>
+          <span class="model-option-check">✦</span>
+        </button>
+        <div class="model-family-label">Gemma 4 — Latest</div>
+        <button class="model-option" data-model="gemma4:4b" type="button">
+          <span class="model-option-name">gemma4:4b</span>
+          <span class="model-option-ram">~3 GB · recommended</span>
+          <span class="model-option-check">✦</span>
+        </button>
+        <button class="model-option" data-model="gemma4:12b" type="button">
+          <span class="model-option-name">gemma4:12b</span>
+          <span class="model-option-ram">~8 GB · high quality</span>
+          <span class="model-option-check">✦</span>
+        </button>
+        <button class="model-option" data-model="gemma4:27b" type="button">
+          <span class="model-option-name">gemma4:27b</span>
+          <span class="model-option-ram">~17 GB · best quality</span>
+          <span class="model-option-check">✦</span>
+        </button>
+      </div>
+
+      <div class="field-label">Terminal Install Command</div>
+      <div class="pull-command-block">
+        <span class="pull-cmd-text" id="pull-cmd-text">Select a model above</span>
+        <button class="pull-copy-btn" id="pull-copy-btn" type="button" title="Copy command">⧉</button>
+      </div>
+
+      <div class="field-label">Ollama URL</div>
+      <input id="f-ollama-url" class="field-input" type="text" placeholder="http://localhost:11434" autocomplete="off" />
+      <div class="field-note">Mac desktop: leave as <code>localhost</code>. Phone: paste your ngrok HTTPS URL (e.g. <code>https://xxxx.ngrok-free.app</code>). No API key needed.</div>
+
+      <div class="field-label">Model Name</div>
       <input id="f-model" class="field-input" type="text" placeholder="gemma3:4b" autocomplete="off" />
-      <button id="save-model" class="btn">Save Gemma Model</button>
-      <div class="field-note">Install Ollama from ollama.com, then run <code>ollama pull gemma3:4b</code>. No API key is needed for Gemma mode.</div>
+
+      <button id="save-model" class="btn">Save Gemma Settings</button>
+    </div>
+
+    <div class="sheet-section" id="gemma-web-settings" hidden>
+      <div class="sheet-section-title">Gemma On-Device — Setup Guide</div>
+
+      <div class="install-steps">
+        <div class="install-step">
+          <div class="step-badge">1</div>
+          <div class="step-copy"><b>Pick a model</b> — 1B is recommended for phones, 4B needs a newer device with more RAM</div>
+        </div>
+        <div class="install-step">
+          <div class="step-badge">2</div>
+          <div class="step-copy"><b>Tap Load Model</b> — downloads once to your browser cache over Wi-Fi, then works offline</div>
+        </div>
+        <div class="install-step">
+          <div class="step-badge">3</div>
+          <div class="step-copy"><b>All done</b> — Gemma runs on your device, no server or API key ever needed</div>
+        </div>
+      </div>
+
+      <div class="field-label">Choose Model</div>
+      <div style="display:flex; flex-direction:column; gap:6px;" id="webllm-model-picker">
+        <div class="field-note" id="webllm-model-loading">Tap "Load Model" to fetch available Gemma models…</div>
+      </div>
+
+      <button id="webllm-load-btn" class="btn" style="align-self:stretch; text-align:center;">Load Model</button>
+
+      <div id="webllm-progress-wrap" class="webllm-progress-wrap" style="display:none;">
+        <div class="conf-track" style="height:4px;">
+          <div class="conf-fill" id="webllm-progress-fill" style="width:0%; background:var(--violet); transition:width 0.4s;"></div>
+        </div>
+        <div class="webllm-progress-label" id="webllm-progress-text">Starting download...</div>
+      </div>
+
+      <div id="webllm-ready-row" style="display:none;">
+        <div class="webllm-ready">✦ Model loaded — ready to coach</div>
+      </div>
+
+      <div class="field-note">Needs WebGPU: Safari 17+ (iOS 17+) or Chrome 113+. Model is cached after the first download — reload is instant.</div>
     </div>
 
     <div class="sheet-section" id="cloud-settings" hidden>

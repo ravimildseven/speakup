@@ -11,7 +11,6 @@ import {
   uploadPresenterPhoto,
 } from './did.js';
 
-const OLLAMA_BASE = 'http://localhost:11434/api/chat';
 const PROXY_BASE = 'http://localhost:3099';
 
 const STORAGE_KEYS = {
@@ -19,6 +18,8 @@ const STORAGE_KEYS = {
   avatarOn: 'nativespeakup_avatar_on',
   speakingGoal: 'nativespeakup_speaking_goal',
   model: 'nativespeakup_model',
+  ollamaUrl: 'nativespeakup_ollama_url',
+  webllmModel: 'nativespeakup_webllm_model',
   cloudUrl: 'nativespeakup_cloud_url',
   cloudKey: 'nativespeakup_cloud_key',
   cloudModel: 'nativespeakup_cloud_model',
@@ -26,6 +27,8 @@ const STORAGE_KEYS = {
 
 const DEFAULTS = {
   model: 'gemma3:4b',
+  ollamaUrl: 'http://localhost:11434',
+  webllmModel: 'Gemma-3-1B-Instruct-q4f32_1-MLC',
   cloudUrl: 'https://api.openai.com/v1',
   cloudModel: 'gpt-4o-mini',
 };
@@ -127,6 +130,10 @@ const settingsOverlay = document.getElementById('settings-overlay');
 const closeSettingsBtn = document.getElementById('close-settings');
 
 const modelInput = document.getElementById('f-model');
+const ollamaUrlInput = document.getElementById('f-ollama-url');
+const modelPicker = document.getElementById('model-picker');
+const pullCmdText = document.getElementById('pull-cmd-text');
+const pullCopyBtn = document.getElementById('pull-copy-btn');
 const saveModelBtn = document.getElementById('save-model');
 const cloudUrlInput = document.getElementById('f-cloud-url');
 const cloudKeyInput = document.getElementById('f-cloud-key');
@@ -139,11 +146,20 @@ const choosePhotoBtn = document.getElementById('choose-photo');
 const photoStatus = document.getElementById('photo-status');
 const modeNoneBtn = document.getElementById('mode-none');
 const modeGemmaBtn = document.getElementById('mode-gemma');
+const modeGemmaWebBtn = document.getElementById('mode-gemma-web');
 const modeCloudBtn = document.getElementById('mode-cloud');
 const modeNote = document.getElementById('mode-note');
 const gemmaSettings = document.getElementById('gemma-settings');
+const gemmaWebSettings = document.getElementById('gemma-web-settings');
 const cloudSettings = document.getElementById('cloud-settings');
 const avatarSettings = document.getElementById('avatar-settings');
+
+const webllmModelPicker = document.getElementById('webllm-model-picker');
+const webllmLoadBtn = document.getElementById('webllm-load-btn');
+const webllmProgressWrap = document.getElementById('webllm-progress-wrap');
+const webllmProgressFill = document.getElementById('webllm-progress-fill');
+const webllmProgressText = document.getElementById('webllm-progress-text');
+const webllmReadyRow = document.getElementById('webllm-ready-row');
 
 const tabSpeak = document.getElementById('tab-speak');
 const tabWords = document.getElementById('tab-words');
@@ -236,6 +252,9 @@ const toastEl = document.getElementById('toast');
 
 let aiMode = normalizeAIMode(localStorage.getItem(STORAGE_KEYS.aiMode));
 let speakingGoal = normalizeSpeakingGoal(localStorage.getItem(STORAGE_KEYS.speakingGoal));
+let webllmEngine = null;
+let webllmLoading = false;
+let webllmModelsPopulated = false;
 let avatarOn = getStored(STORAGE_KEYS.avatarOn, 'false') === 'true';
 let activeTab = 'speak';
 let currentSpeakResponse = null;
@@ -292,18 +311,60 @@ goalConfidentBtn.addEventListener('click', () => setSpeakingGoal('confident'));
 goalProfessionalBtn.addEventListener('click', () => setSpeakingGoal('professional'));
 modeNoneBtn.addEventListener('click', () => setAI(null));
 modeGemmaBtn.addEventListener('click', () => setAI('gemma'));
+modeGemmaWebBtn.addEventListener('click', () => setAI('gemma-web'));
 modeCloudBtn.addEventListener('click', () => setAI('cloud'));
+
+webllmModelPicker.addEventListener('click', event => {
+  const option = event.target.closest('.model-option');
+  if (!option) return;
+  const model = option.dataset.webmodel;
+  localStorage.setItem(STORAGE_KEYS.webllmModel, model);
+  webllmModelPicker.querySelectorAll('.model-option').forEach(btn => {
+    btn.classList.toggle('selected', btn === option);
+  });
+  webllmReadyRow.style.display = 'none';
+  webllmEngine = null;
+  syncSpeakAvailability();
+});
+
+webllmLoadBtn.addEventListener('click', loadWebLLMModel);
+
+modelPicker.addEventListener('click', event => {
+  const option = event.target.closest('.model-option');
+  if (!option) return;
+  const model = option.dataset.model;
+  modelInput.value = model;
+  pullCmdText.textContent = `ollama pull ${model}`;
+  modelPicker.querySelectorAll('.model-option').forEach(btn => {
+    btn.classList.toggle('selected', btn === option);
+  });
+});
+
+pullCopyBtn.addEventListener('click', async () => {
+  const cmd = pullCmdText.textContent;
+  if (!cmd || cmd === 'Select a model above') return;
+  try {
+    await navigator.clipboard.writeText(cmd);
+    const original = pullCopyBtn.textContent;
+    pullCopyBtn.textContent = '✓';
+    setTimeout(() => { pullCopyBtn.textContent = original; }, 1200);
+  } catch {
+    showToast('Clipboard access was blocked');
+  }
+});
 
 saveModelBtn.addEventListener('click', () => {
   const model = modelInput.value.trim();
   if (!model) {
-    showToast('Enter an Ollama model name');
+    showToast('Select or enter an Ollama model name');
     return;
   }
+  const url = ollamaUrlInput.value.trim() || DEFAULTS.ollamaUrl;
   localStorage.setItem(STORAGE_KEYS.model, model);
-  modelInput.value = model;
+  localStorage.setItem(STORAGE_KEYS.ollamaUrl, url);
+  syncSettingsForm();
   syncModeUI();
-  showToast('Gemma model saved');
+  showToast('Gemma settings saved');
 });
 
 saveCloudBtn.addEventListener('click', () => {
@@ -484,11 +545,20 @@ function closeSettings() {
 
 function syncSettingsForm() {
   modelInput.value = getModelName();
+  ollamaUrlInput.value = getOllamaUrl();
   cloudUrlInput.value = getCloudBaseUrl();
   cloudModelInput.value = getCloudModel();
   cloudKeyInput.value = getCloudKey() ? '••••••••' : '';
   didKeyInput.value = getDIDKey() ? '••••••••' : '';
   photoStatus.textContent = getPresenterUrl() ? 'Photo uploaded ✓' : 'No photo uploaded yet';
+
+  const savedModel = getModelName();
+  modelPicker.querySelectorAll('.model-option').forEach(btn => {
+    btn.classList.toggle('selected', btn.dataset.model === savedModel);
+  });
+  if (savedModel) pullCmdText.textContent = `ollama pull ${savedModel}`;
+
+  webllmReadyRow.style.display = webllmEngine ? 'block' : 'none';
 }
 
 function setAI(mode) {
@@ -499,7 +569,7 @@ function setAI(mode) {
     localStorage.removeItem(STORAGE_KEYS.aiMode);
   }
 
-  document.body.classList.toggle('gemma', aiMode === 'gemma');
+  document.body.classList.toggle('gemma', aiMode === 'gemma' || aiMode === 'gemma-web');
   syncModeUI();
 
   if (!isSpeakReady()) {
@@ -743,7 +813,9 @@ async function processWithAI(text) {
 
   micBtn.classList.add('processing');
   micStatus.className = 'mic-status working';
-  micStatus.textContent = aiMode === 'gemma' ? 'checking local Gemma...' : 'calling cloud AI...';
+  micStatus.textContent = aiMode === 'gemma' ? 'checking local Gemma...'
+    : aiMode === 'gemma-web' ? 'thinking on-device...'
+    : 'calling cloud AI...';
   micIcon.textContent = '⌛';
   micHint.textContent = 'Processing your speech...';
   transcriptBox.classList.remove('listening');
@@ -754,6 +826,8 @@ async function processWithAI(text) {
   try {
     const response = aiMode === 'gemma'
       ? await processWithOllama(prompt)
+      : aiMode === 'gemma-web'
+      ? await processWithWebLLM(prompt)
       : await processWithCloud(prompt);
 
     currentSpeakResponse = normalizeResponse(response);
@@ -779,10 +853,11 @@ async function processWithAI(text) {
 }
 
 async function processWithOllama(prompt) {
+  const ollamaBase = `${getOllamaUrl()}/api/chat`;
   let response;
 
   try {
-    response = await fetch(OLLAMA_BASE, {
+    response = await fetch(ollamaBase, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -793,7 +868,7 @@ async function processWithOllama(prompt) {
       }),
     });
   } catch {
-    throw new Error('Gemma needs Ollama running locally. Install Ollama, pull the model, and run ollama serve.');
+    throw new Error('Cannot reach Ollama. Make sure it is running and the URL in settings is correct.');
   }
 
   if (!response.ok) {
@@ -846,6 +921,124 @@ async function processWithCloud(prompt) {
   }
 
   return parseJSON(content);
+}
+
+async function processWithWebLLM(prompt) {
+  if (!webllmEngine) {
+    throw new Error('Open the menu and tap "Load Model" to download Gemma to your device first.');
+  }
+
+  const response = await webllmEngine.chat.completions.create({
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.2,
+    max_tokens: 600,
+    response_format: { type: 'json_object' },
+  });
+
+  const content = response.choices?.[0]?.message?.content;
+  if (!content) throw new Error('On-device model returned an empty response');
+  return parseJSON(content);
+}
+
+async function populateWebLLMModels() {
+  const loadingEl = document.getElementById('webllm-model-loading');
+  if (loadingEl) loadingEl.textContent = 'Fetching available Gemma models…';
+
+  try {
+    const { prebuiltAppConfig } = await import('https://esm.run/@mlc-ai/web-llm');
+    const gemmaModels = prebuiltAppConfig.model_list.filter(m =>
+      m.model_id.toLowerCase().includes('gemma')
+    );
+
+    webllmModelPicker.replaceChildren();
+
+    if (!gemmaModels.length) {
+      webllmModelPicker.innerHTML = '<div class="field-note">No Gemma models found in this WebLLM version.</div>';
+      return;
+    }
+
+    const savedModel = getWebLLMModel();
+    let firstId = null;
+
+    gemmaModels.forEach(m => {
+      const btn = document.createElement('button');
+      btn.className = 'model-option';
+      btn.dataset.webmodel = m.model_id;
+      btn.type = 'button';
+
+      const vram = m.vram_required_MB
+        ? `~${(m.vram_required_MB / 1024).toFixed(1)} GB`
+        : '';
+
+      btn.innerHTML = `<span class="model-option-name">${m.model_id}</span><span class="model-option-ram">${vram}</span><span class="model-option-check">✦</span>`;
+      webllmModelPicker.appendChild(btn);
+
+      if (!firstId) firstId = m.model_id;
+    });
+
+    const toSelect = gemmaModels.find(m => m.model_id === savedModel)?.model_id || firstId;
+    if (toSelect) {
+      webllmModelPicker.querySelector(`[data-webmodel="${toSelect}"]`)?.classList.add('selected');
+      localStorage.setItem(STORAGE_KEYS.webllmModel, toSelect);
+    }
+
+    webllmModelsPopulated = true;
+  } catch (error) {
+    webllmModelPicker.innerHTML = `<div class="field-note">Could not fetch model list: ${error.message.slice(0, 80)}</div>`;
+  }
+}
+
+async function loadWebLLMModel() {
+  if (webllmLoading) return;
+
+  if (!navigator.gpu) {
+    showToast('WebGPU not found. Use Chrome 113+ or Safari 17+ (iOS 17+).');
+    return;
+  }
+
+  if (!webllmModelsPopulated) {
+    await populateWebLLMModels();
+  }
+
+  const modelId = getWebLLMModel();
+  if (!modelId) {
+    showToast('Select a model first');
+    return;
+  }
+
+  webllmLoading = true;
+  webllmLoadBtn.disabled = true;
+  webllmLoadBtn.textContent = 'Loading…';
+  webllmProgressWrap.style.display = 'flex';
+  webllmReadyRow.style.display = 'none';
+  webllmProgressFill.style.width = '0%';
+  webllmProgressText.textContent = 'Starting…';
+
+  try {
+    const { CreateMLCEngine } = await import('https://esm.run/@mlc-ai/web-llm');
+
+    const engine = await CreateMLCEngine(modelId, {
+      initProgressCallback: report => {
+        const pct = Math.round((report.progress || 0) * 100);
+        webllmProgressFill.style.width = `${pct}%`;
+        webllmProgressText.textContent = report.text || `${pct}%`;
+      },
+    });
+
+    webllmEngine = engine;
+    webllmProgressWrap.style.display = 'none';
+    webllmReadyRow.style.display = 'block';
+    webllmLoadBtn.textContent = 'Reload Model';
+    syncSpeakAvailability();
+    showToast('Gemma loaded — ready to coach');
+  } catch (error) {
+    webllmProgressWrap.style.display = 'none';
+    webllmLoadBtn.textContent = 'Load Model';
+    showToast(`Load failed: ${error.message.slice(0, 80)}`);
+  } finally {
+    webllmLoading = false;
+    webllmLoadBtn.disabled = false;
+  }
 }
 
 function parseJSON(raw) {
@@ -1061,19 +1254,24 @@ function syncSpeakingGoalUI() {
 }
 
 function syncModeUI() {
-  document.body.classList.toggle('gemma', aiMode === 'gemma');
+  document.body.classList.toggle('gemma', aiMode === 'gemma' || aiMode === 'gemma-web');
   modeNoneBtn.classList.toggle('active', !aiMode);
   modeGemmaBtn.classList.toggle('active', aiMode === 'gemma');
+  modeGemmaWebBtn.classList.toggle('active', aiMode === 'gemma-web');
   modeCloudBtn.classList.toggle('active', aiMode === 'cloud');
 
   gemmaSettings.hidden = aiMode !== 'gemma';
+  gemmaWebSettings.hidden = aiMode !== 'gemma-web';
+  if (aiMode === 'gemma-web' && !webllmModelsPopulated) populateWebLLMModels();
   cloudSettings.hidden = aiMode !== 'cloud';
   avatarSettings.hidden = !aiMode;
 
   if (!aiMode) {
     modeNote.textContent = 'Choose a mode to unlock the matching speaking setup.';
   } else if (aiMode === 'gemma') {
-    modeNote.textContent = 'Gemma Local is selected. Only local settings are shown below.';
+    modeNote.textContent = 'Gemma Local is selected. Ollama must be running on your Mac.';
+  } else if (aiMode === 'gemma-web') {
+    modeNote.textContent = 'Gemma On-Device selected. Load the model once to activate it.';
   } else {
     modeNote.textContent = 'Cloud AI is selected. Only cloud settings are shown below.';
   }
@@ -1088,7 +1286,11 @@ function syncSpeakAvailability() {
   if (!aiMode) {
     setupKicker.textContent = 'Default View';
     setupTitle.textContent = `Choose your AI to start ${goal.title}.`;
-    setupCopy.innerHTML = `Open the top-right menu and pick <b>Gemma Local</b> or <b>Cloud AI</b>. Your current speaking goal is <b>${goal.title}</b>, and the speaking tools load only after you choose an AI mode.`;
+    setupCopy.innerHTML = `Open the top-right menu and pick <b>Gemma On-Device</b> to run Gemma in your browser, <b>Gemma Local</b> for Ollama on Mac, or <b>Cloud AI</b> for an API key setup.`;
+  } else if (aiMode === 'gemma-web' && !ready) {
+    setupKicker.textContent = 'Gemma On-Device';
+    setupTitle.textContent = 'Load the model to activate.';
+    setupCopy.innerHTML = `Open the menu, pick a model under <b>Gemma On-Device</b>, and tap <b>Load Model</b>. It downloads once to your browser — then works offline with no API key.`;
   } else if (aiMode === 'cloud' && !ready) {
     setupKicker.textContent = 'Cloud AI';
     setupTitle.textContent = 'Finish your Cloud AI setup.';
@@ -1117,6 +1319,7 @@ function syncSpeakAvailability() {
 
 function isSpeakReady() {
   if (aiMode === 'gemma') return Boolean(getModelName());
+  if (aiMode === 'gemma-web') return Boolean(webllmEngine);
   if (aiMode === 'cloud') return hasCloudConfig();
   return false;
 }
@@ -1291,6 +1494,14 @@ function getModelName() {
   return getStored(STORAGE_KEYS.model, DEFAULTS.model);
 }
 
+function getOllamaUrl() {
+  return getStored(STORAGE_KEYS.ollamaUrl, DEFAULTS.ollamaUrl).replace(/\/$/, '');
+}
+
+function getWebLLMModel() {
+  return getStored(STORAGE_KEYS.webllmModel, DEFAULTS.webllmModel);
+}
+
 function getCloudBaseUrl() {
   return getStored(STORAGE_KEYS.cloudUrl, DEFAULTS.cloudUrl);
 }
@@ -1329,7 +1540,7 @@ function normalizeCloudBaseUrl(value) {
 }
 
 function normalizeAIMode(value) {
-  return value === 'gemma' || value === 'cloud' ? value : null;
+  return value === 'gemma' || value === 'gemma-web' || value === 'cloud' ? value : null;
 }
 
 function normalizeSpeakingGoal(value) {
