@@ -20,6 +20,7 @@ const STORAGE_KEYS = {
   model: 'nativespeakup_model',
   ollamaUrl: 'nativespeakup_ollama_url',
   webllmModel: 'nativespeakup_webllm_model',
+  hfToken: 'nativespeakup_hf_token',
   cloudUrl: 'nativespeakup_cloud_url',
   cloudKey: 'nativespeakup_cloud_key',
   cloudModel: 'nativespeakup_cloud_model',
@@ -28,21 +29,22 @@ const STORAGE_KEYS = {
 const DEFAULTS = {
   model: 'gemma3:4b',
   ollamaUrl: 'http://localhost:11434',
-  webllmModel: 'gemma-3n-e1b',
+  webllmModel: 'gemma3-1b',
   cloudUrl: 'https://api.openai.com/v1',
   cloudModel: 'gpt-4o-mini',
 };
 
+// URLs verified: return HTTP 401 (gated) not 404 — correct paths, need HF token + license acceptance
 const GEMMA_WEB_MODELS = [
   {
-    id: 'gemma-3n-e1b',
-    name: 'Gemma 3n · E1B',
-    url: 'https://storage.googleapis.com/mediapipe-models/llm_inference/gemma-3n-E1B-it-cpu-int4/float16/1/gemma-3n-E1B-it-cpu-int4.task',
+    id: 'gemma3-1b',
+    name: 'Gemma 3 · 1B',
+    url: 'https://huggingface.co/litert-community/Gemma3-1B-IT/resolve/main/gemma3-1b-it-int4-web.task',
   },
   {
     id: 'gemma-3n-e2b',
     name: 'Gemma 3n · E2B',
-    url: 'https://storage.googleapis.com/mediapipe-models/llm_inference/gemma-3n-E2B-it-cpu-int4/float16/1/gemma-3n-E2B-it-cpu-int4.task',
+    url: 'https://huggingface.co/google/gemma-3n-E2B-it-litert-lm/resolve/main/gemma-3n-E2B-it-int4-Web.litertlm',
   },
 ];
 
@@ -171,10 +173,13 @@ const avatarSettings = document.getElementById('avatar-settings');
 
 const webllmModelPicker = document.getElementById('webllm-model-picker');
 const webllmLoadBtn = document.getElementById('webllm-load-btn');
+const webllmTestBtn = document.getElementById('webllm-test-btn');
+const webllmTestResult = document.getElementById('webllm-test-result');
 const webllmProgressWrap = document.getElementById('webllm-progress-wrap');
 const webllmProgressFill = document.getElementById('webllm-progress-fill');
 const webllmProgressText = document.getElementById('webllm-progress-text');
 const webllmReadyRow = document.getElementById('webllm-ready-row');
+const hfTokenInput = document.getElementById('f-hf-token');
 
 const tabSpeak = document.getElementById('tab-speak');
 const tabWords = document.getElementById('tab-words');
@@ -343,6 +348,7 @@ webllmModelPicker.addEventListener('click', event => {
 });
 
 webllmLoadBtn.addEventListener('click', loadWebLLMModel);
+webllmTestBtn.addEventListener('click', testModelUrl);
 
 modelPicker.addEventListener('click', event => {
   const option = event.target.closest('.model-option');
@@ -574,6 +580,7 @@ function syncSettingsForm() {
   if (savedModel) pullCmdText.textContent = `ollama pull ${savedModel}`;
 
   webllmReadyRow.style.display = webllmEngine ? 'block' : 'none';
+  hfTokenInput.value = getHFToken() ? '••••••••' : '';
 }
 
 function setAI(mode) {
@@ -956,9 +963,51 @@ function renderWebModels() {
   webllmModelsPopulated = true;
 }
 
+async function testModelUrl() {
+  const modelId = getWebLLMModel();
+  const modelConfig = GEMMA_WEB_MODELS.find(m => m.id === modelId);
+  if (!modelConfig) { webllmTestResult.textContent = 'Select a model first'; return; }
+
+  const token = resolveHFToken();
+  if (!token) { webllmTestResult.textContent = '✗ Paste your HuggingFace token first'; return; }
+
+  webllmTestBtn.disabled = true;
+  webllmTestResult.textContent = 'Testing…';
+
+  try {
+    const res = await fetch(modelConfig.url, {
+      method: 'HEAD',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (res.ok) {
+      const bytes = parseInt(res.headers.get('content-length') || '0', 10);
+      const mb = bytes ? ` · ${(bytes / 1048576).toFixed(0)} MB` : '';
+      webllmTestResult.textContent = `✓ Accessible${mb} — ready to load`;
+      localStorage.setItem(STORAGE_KEYS.hfToken, token);
+      syncSettingsForm();
+    } else if (res.status === 401 || res.status === 403) {
+      webllmTestResult.textContent = '✗ Token rejected or license not accepted on this model's HF page';
+    } else {
+      webllmTestResult.textContent = `✗ HTTP ${res.status}`;
+    }
+  } catch {
+    webllmTestResult.textContent = '✗ Network error — check your connection';
+  } finally {
+    webllmTestBtn.disabled = false;
+  }
+}
+
 async function fetchWithProgress(url, onProgress) {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Model download failed (HTTP ${response.status}). Check the model URL.`);
+  const token = resolveHFToken();
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const response = await fetch(url, { headers });
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new Error('Access denied. Check your HuggingFace token and accept the Gemma license on the model\'s HF page.');
+    }
+    throw new Error(`Model download failed (HTTP ${response.status}).`);
+  }
 
   const total = parseInt(response.headers.get('Content-Length') || '0', 10);
   const reader = response.body.getReader();
@@ -1004,6 +1053,10 @@ async function setCachedModel(url, buffer) {
 
 async function loadWebLLMModel() {
   if (webllmLoading) return;
+
+  const token = resolveHFToken();
+  if (!token) { showToast('Paste your HuggingFace token in settings first'); return; }
+  localStorage.setItem(STORAGE_KEYS.hfToken, token);
 
   const modelId = getWebLLMModel();
   const modelConfig = GEMMA_WEB_MODELS.find(m => m.id === modelId);
@@ -1533,6 +1586,16 @@ function getOllamaUrl() {
 
 function getWebLLMModel() {
   return getStored(STORAGE_KEYS.webllmModel, DEFAULTS.webllmModel);
+}
+
+function getHFToken() {
+  return localStorage.getItem(STORAGE_KEYS.hfToken) || '';
+}
+
+function resolveHFToken() {
+  const raw = hfTokenInput.value.trim();
+  if (!raw) return getHFToken();
+  return /^•+$/.test(raw) ? getHFToken() : raw;
 }
 
 function getCloudBaseUrl() {

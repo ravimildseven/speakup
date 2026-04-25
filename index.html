@@ -1015,33 +1015,40 @@ body.gemma .btn:hover { background: var(--violet-dim); color: var(--violet); bor
       <div class="install-steps">
         <div class="install-step">
           <div class="step-badge">1</div>
-          <div class="step-copy"><b>Pick a model</b> — 1B is recommended for phones, 4B needs a newer device with more RAM</div>
+          <div class="step-copy">Create a free account at <code>huggingface.co</code> → Settings → Tokens → <b>New token (read)</b></div>
         </div>
         <div class="install-step">
           <div class="step-badge">2</div>
-          <div class="step-copy"><b>Tap Load Model</b> — downloads once to your browser cache over Wi-Fi, then works offline</div>
+          <div class="step-copy">Visit each model's HF page below and click <b>Agree and access</b> to accept the Gemma license</div>
         </div>
         <div class="install-step">
           <div class="step-badge">3</div>
-          <div class="step-copy"><b>All done</b> — Gemma runs on your device, no server or API key ever needed</div>
+          <div class="step-copy">Paste your token below, pick a model, tap <b>Test</b> to verify, then <b>Load Model</b></div>
         </div>
       </div>
 
+      <div class="field-label">HuggingFace Token</div>
+      <input id="f-hf-token" class="field-input" type="password" placeholder="hf_..." autocomplete="off" />
+
       <div class="field-label">Choose Model</div>
       <div style="display:flex; flex-direction:column; gap:6px;" id="webllm-model-picker">
-        <button class="model-option selected" data-webmodel="gemma-3n-e1b" type="button">
-          <span class="model-option-name">Gemma 3n · E1B</span>
-          <span class="model-option-ram">~400 MB · fastest · phones ✓</span>
+        <button class="model-option selected" data-webmodel="gemma3-1b" type="button">
+          <span class="model-option-name">Gemma 3 · 1B</span>
+          <span class="model-option-ram">700 MB · phones ✓</span>
           <span class="model-option-check">✦</span>
         </button>
         <button class="model-option" data-webmodel="gemma-3n-e2b" type="button">
           <span class="model-option-name">Gemma 3n · E2B</span>
-          <span class="model-option-ram">~600 MB · better quality</span>
+          <span class="model-option-ram">~550 MB · mobile-optimized</span>
           <span class="model-option-check">✦</span>
         </button>
       </div>
 
-      <button id="webllm-load-btn" class="btn" style="align-self:stretch; text-align:center;">Load Model</button>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <button id="webllm-test-btn" class="btn" type="button">Test</button>
+        <button id="webllm-load-btn" class="btn" style="flex:1; text-align:center;">Load Model</button>
+      </div>
+      <div id="webllm-test-result" style="font-size:11px; color:var(--muted); font-family:'DM Mono',monospace; min-height:16px;"></div>
 
       <div id="webllm-progress-wrap" class="webllm-progress-wrap" style="display:none;">
         <div class="conf-track" style="height:4px;">
